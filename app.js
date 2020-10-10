@@ -9,6 +9,8 @@ var flash = require('connect-flash');
 var student = require('./models/student.js');
 var teacher = require('./models/teacher.js');
 var authstudent = new passport.Passport();
+var authteacher = new passport.Passport();
+//var authstudent = require('passport');
 	fs   = require('fs'),
 	path = require('path');
     require('dotenv/config');
@@ -56,16 +58,18 @@ app.use(require("express-session")({
 	saveUninitialized:false
 }))
 
-app.use(passport.initialize());
-app.use(passport.session());
-app.use(authstudent.initialize())
+app.use(authteacher.initialize({ userProperty:'teacheruser'}));
+app.use(authteacher.session());
+//app.use(authstudent.initialize({ userProperty:'studentuser'}));
+app.use(authstudent.initialize({ userProperty:'studentuser'}));
+//app.use(passport.initialize({ userProperty: 'roomUser' }));
 app.use(authstudent.session())
+authteacher.use(new LocalStrategy(teacher.authenticate()));
 authstudent.use(new LocalStrategy(student.authenticate()));
-passport.use(new LocalStrategy(teacher.authenticate()));
+authteacher.serializeUser(teacher.serializeUser());
+authteacher.deserializeUser(teacher.deserializeUser());
 authstudent.serializeUser(student.serializeUser());
 authstudent.deserializeUser(student.deserializeUser());
-passport.serializeUser(teacher.serializeUser());
-passport.deserializeUser(teacher.deserializeUser());
 
 app.use(function(req,res,next){
 	res.locals.CurrentUser = req.user;
@@ -144,7 +148,7 @@ app.post('/teacher/register',upload.single('DP'),function(req,res,next){
 
 		}
 		else{
-			passport.authenticate("local")(req,res,function(){
+			authteacher.authenticate("local")(req,res,function(){
 				res.render('homepageTutor');
 		})
 		}
@@ -156,10 +160,10 @@ app.post('/teacher/register',upload.single('DP'),function(req,res,next){
 
 app.get('/teacher/login',function(req,res){
 	res.render("auth/TeacherLogin");
-	console.log(req.user);
+	
 })
 
-app.post('/teacher/login',passport.authenticate("local",{
+app.post('/teacher/login',authteacher.authenticate("local",{
 	successRedirect:"/teacher/home",
 	failureRedirect:"/teacher/login"
 
@@ -174,11 +178,12 @@ app.get('/logout',function(req,res){
 
 app.get('/student/home',function(req,res){
 	res.render("homepage");
-	console.log();
+	console.log(req.studentuser);
 })
 
 app.get('/teacher/home',function(req,res){
 	res.render("homepageTutor");
+	console.log(req.teacheruser._id);
 })
 		
 
